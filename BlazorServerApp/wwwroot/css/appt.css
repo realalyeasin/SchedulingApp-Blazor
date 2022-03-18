@@ -1,0 +1,4 @@
+﻿#deleteAppt:hover,
+#editAppt:hover {
+    cursor:pointer;
+}
