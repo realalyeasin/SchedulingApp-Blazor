@@ -4,7 +4,7 @@
 	{
 		public int Id { get; set; }
 
-		public string AvailableAppointmentId { get; set; }
+		public int AvailableAppointmentId { get; set; }
 
 		public string FullName { get; set; } = string.Empty;
 
