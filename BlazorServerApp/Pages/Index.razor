@@ -49,46 +49,78 @@
   <path d="M11.5 9c.653 0 1.273-.139 1.833-.39L12 5.5 11 3l3.826-1.53A4.5 4.5 0 0 0 7.29 6.092l-6.116 5.096a2.583 2.583 0 1 0 3.638 3.638L9.908 8.71A4.49 4.49 0 0 0 11.5 9Zm-1.292-4.361-.596.893.809-.27a.25.25 0 0 1 .287.377l-.596.893.809-.27.158.475-1.5.5a.25.25 0 0 1-.287-.376l.596-.893-.809.27a.25.25 0 0 1-.287-.377l.596-.893-.809.27-.158-.475 1.5-.5a.25.25 0 0 1 .287.376ZM3 14a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z"/>
 </svg>
 
-		<p class="lead">Are you ready t oschedule a new appointment?</p>
+		<p class="lead">Are you ready to schedule a new appointment?</p>
 		<h3>Step 1 : Select a date</h3>
 		<p class="text-muted">If there are any appointments, they will be displayed under step 2</p>
-		<input type="date" @key="toogle" @onchange="ShowAvailableAppointments" />
+		<input type="date" @key="toggle" @onchange="ShowAvailableAppointments" />
 	</secion>
 
 	<secion id="step-2">
 		@if (stepTwoReady)
-		{
-			<h3>Step 2 : Select the time that you would like</h3>
-			@if(availableAppointments == null)
-			{
-				<p>ok 1111 </p>
-				<p><em>Available appointments for the date selected will be shown here</em></p>
-			}
-			else
-			{
-				@foreach (var a in availableAppointments)
-				{
-					<ul class="available-appt-list">
-						@if(a.StartTime.ToLocalTime() > DateTime.Now && a.Reserved !=true)
-						{
-							<li><button>Click</button></li>
-							<p>ok2222 </p>
-							//<li class="not-reserved">@a.StartTime.ToLocalTime().ToString("g") <button @onselect="()=> SelectAppointment(a.StartTime, a.Id)" class="btn btn-secondary">Reserved</button></li>
-						}
-						else if (a.StartTime.ToLocalTime() > DateTime.Now && a.Reserved == true)
-						{
-							//<li class="already-reserved">@a.StartTime.ToLocalTime().ToString("g") <span class="oi oi-ban"></span>&nbsp; Already Reserved</li>
-							//<li><button>Click</button></li>
-							<p>ok3333</p>
-						}
-					</ul>
-				}
-			}
-		}
+        {
+            <h3>Step 2: Select the time that you would like</h3>
+            @if (availableAppointments == null)
+            {
+                <p><em>Available appointments for the date selected will be shown here</em></p>
+
+            }
+            else
+            {
+                @foreach (var a in availableAppointments)
+                {
+                    <ul class="available-appt-list">
+                        @if (a.StartTime.ToLocalTime() > DateTime.Now && a.Reserved != true)
+                        {
+                            <li class="not-reserved">
+                                @a.StartTime.ToLocalTime().ToString("g")
+                                <button @onclick="() => SelectAppointment(a.StartTime, a.Id)" class="btn btn-primary">Reserve</button>
+                            </li>
+                        }
+                        else if (a.StartTime.ToLocalTime() > DateTime.Now && a.Reserved == true)
+                        {
+                            <li class="already-reserved">
+                                @a.StartTime.ToLocalTime().ToString("g")
+                                <span class="oi oi-ban"></span>&nbsp; Already Reserved
+                            </li>
+                        }
+                    </ul>
+
+                }
+            }
+        }
+
+        @if (noAppointments == true)
+        {
+            <div class="alert alert-info" role="alert">
+                There are no appointments for the selected date
+            </div>
+        }
 	</secion>
 
 	<secion id="step-3">
+		@if(stepThreeReady)
+        {
+            <h3>Step 3: Enter your information and submit</h3>
+            <EditForm Model="@newAppointment" OnValidSubmit="@SaveAppointment">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+                <label for="name" class="form-label">Full Name</label>
+                <InputText class="form-control mb-2" id="fullName" @bind-Value="newAppointment.FullName" />
 
+                <label for="reason" class="form-label">Reason</label>
+                <InputText class="form-control mb-2" id="reason" @bind-Value="newAppointment.Reason" />
+
+                <InputDate hidden=true id="startTime" @bind-Value="newAppointment.StartTime" />
+
+                <label for="appointmentTime" class="form-label">Appointment Time</label>
+                <input class="form-control mb-2" disabled value="@selectedDateTime.ToLocalTime()" />
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn alert-primary mt-3">Add</button>
+                </div>
+
+            </EditForm>
+        }
 	</secion>
 </div>
 
@@ -115,7 +147,7 @@
 	bool stepThreeReady = false;
 	bool noAppointments = false;
 
-	bool toogle = false;
+	bool toggle = false;
 
 	//Load the initial data
 
@@ -134,14 +166,12 @@
 		availableAppointments = availableAppointments.OrderBy(x => x.StartTime).ToList();
 
 		stepTwoReady = true;
-		if(availableAppointments.Count == 0)
+
+		if (availableAppointments.Count == 0)
 		{
 			noAppointments = true;
 		}
-		else
-		{
-			noAppointments = false;
-		}
+		else noAppointments = false;
 	}
 
 	private async Task SelectAppointment(DateTime dateTime, int availableId)
@@ -157,6 +187,45 @@
 		newAppointment.EndTime = thisAppointment[0].EndTime;
 	}
 
+	private async Task SaveAppointment()
+	{
+		AppointmentModel a = new AppointmentModel
+			{
+				AvailableAppointmentId = selectedAvailableId,
+				FullName = newAppointment.FullName,
+				Reason = newAppointment.Reason,
+				StartTime = newAppointment.StartTime.ToUniversalTime(),
+				EndTime = newAppointment.EndTime.ToUniversalTime(),
+				CreatedAt = DateTime.UtcNow,
+				UpdatedAt = DateTime.UtcNow
+
+
+			};
+
+		string sql = "INSERT INTO appointment (AvailableAppointmentId, FullName, Reason, StartTime, EndTime, CreatedAt, UpdatedAt) VALUES (@AvailableAppointmentId, @FullName, @Reason, @StartTime, @EndTime, @CreatedAt, @UpdatedAt);";
+		await _data.SaveData(sql, a, _cofig.GetConnectionString("MySQLConnection"));
+
+		await ReserveAvailableAppointment();
+
+		stepTwoReady = false;
+        stepThreeReady = false;
+
+		toggle = !toggle;
+
+		newAppointment = new AppointmentModel();
+
+        await OnInitializedAsync();
+
+	}
+
+	private async Task ReserveAvailableAppointment()
+    {
+        string sql = "UPDATE available_appointment SET RESERVED = true WHERE Id = @Id";
+        await _data.SaveData(sql, new { Id = selectedAvailableId }, _cofig.GetConnectionString("MySQLConnection"));
+        await OnInitializedAsync();
+
+    }
+
 	private async Task DeleteAppointment(int id, int cancelId)
 	{
 		string sql = "DELETE FROM appointment WHERE Id = @Id";
@@ -166,7 +235,7 @@
 
 		//Reset the data input
 
-		toogle = !toogle;
+		toggle = !toggle;
 		stepTwoReady = false;
 		stepThreeReady = false;
 
